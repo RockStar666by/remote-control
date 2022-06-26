@@ -1,7 +1,10 @@
 import { httpServer } from './src/http_server/index';
-import robot, { getMousePos } from 'robotjs';
+import robot from 'robotjs';
 import { createWebSocketStream, WebSocketServer } from 'ws';
 import { printScreen } from './src/printScreen/printScreen';
+import { drawRectangle } from './src/drawing/drawRectangle';
+import { drawSquare } from './src/drawing/drawSquare';
+import { drawCircle } from './src/drawing/drawCircle';
 
 const HTTP_PORT = 3000;
 const SOCKET_PORT = 8080;
@@ -18,94 +21,94 @@ const wss = new WebSocketServer(
   }
 );
 
-const drawXY = async (direction: string, length: number) => {
-  const mouse = getMousePos();
-  switch (direction) {
-    case 'right':
-      for (let i = 0; i <= length; i += 1) {
-        const x = mouse.x + i;
-        robot.dragMouse(x, mouse.y);
-      }
-      break;
-    case 'left':
-      for (let i = 0; i <= length; i += 1) {
-        const x = mouse.x - i;
-        robot.dragMouse(x, mouse.y);
-      }
-      break;
-    case 'down':
-      for (let i = 0; i <= length; i += 1) {
-        const y = mouse.y + i;
-        robot.dragMouse(mouse.x, y);
-      }
-      break;
-    case 'up':
-      for (let i = 0; i <= length; i += 1) {
-        const y = mouse.y - i;
-        robot.dragMouse(mouse.x, y);
-      }
-      break;
-    default:
-      break;
-  }
-};
-
 wss.on('connection', (ws) => {
   process.stdout.write('New Client connected!\n');
   const duplex = createWebSocketStream(ws, { encoding: 'utf8', decodeStrings: false });
   duplex.on('data', async (chunk) => {
-    console.log('received: %s', chunk);
+    console.log('Received: %s', chunk);
     const [command, value1, value2] = chunk.split(' ');
     const mouse = robot.getMousePos();
     switch (command) {
       case 'mouse_position':
-        const message = `mouse_position ${mouse.x}px,${mouse.y}px \0`;
-        duplex.write(message, 'utf8');
+        try {
+          const message = `mouse_position ${mouse.x}px,${mouse.y}px \0`;
+          duplex.write(message, 'utf8');
+          console.log('Result: %s', message);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'mouse_up':
-        robot.moveMouse(mouse.x, mouse.y - Number(value1));
+        try {
+          robot.moveMouse(mouse.x, mouse.y - Number(value1));
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'mouse_down':
-        robot.moveMouse(mouse.x, mouse.y + Number(value1));
+        try {
+          robot.moveMouse(mouse.x, mouse.y + Number(value1));
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'mouse_left':
-        robot.moveMouse(mouse.x - Number(value1), mouse.y);
+        try {
+          robot.moveMouse(mouse.x - Number(value1), mouse.y);
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'mouse_right':
-        robot.moveMouse(mouse.x + Number(value1), mouse.y);
+        try {
+          robot.moveMouse(mouse.x + Number(value1), mouse.y);
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'draw_circle':
-        for (let i = 0; i <= Math.PI * 2; i += 0.01) {
-          const x = mouse.x + Number(value1) * (1 - Math.cos(i));
-          const y = mouse.y - Number(value1) * Math.sin(i);
-          robot.dragMouse(x, y);
+        try {
+          await drawCircle(value1);
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
         }
         break;
       case 'draw_rectangle':
-        robot.mouseToggle('down');
-        const drawRectangle = async (width: string, length: string) => {
-          await drawXY('right', Number(width));
-          await drawXY('down', Number(length));
-          await drawXY('left', Number(width));
-          await drawXY('up', Number(length));
-          robot.mouseToggle('up');
-        };
-        drawRectangle(value1, value2);
+        try {
+          await drawRectangle(value1, value2);
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'draw_square':
-        robot.mouseToggle('down');
-        const drawSquare = async (width: string) => {
-          await drawXY('right', Number(width));
-          await drawXY('down', Number(width));
-          await drawXY('left', Number(width));
-          await drawXY('up', Number(width));
-          robot.mouseToggle('up');
-        };
-        drawSquare(value1);
+        try {
+          await drawSquare(value1);
+          duplex.write(chunk, 'utf8');
+          console.log('Result: %s', chunk);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       case 'prnt_scrn':
-        const myString = await printScreen();
-        duplex.write(`prnt_scrn ${myString}`, 'base64');
+        try {
+          const myString = await printScreen();
+          duplex.write(`prnt_scrn ${myString} \0`, 'base64');
+          console.log('Result: %s', `prnt_scrn BufferImage \0`);
+        } catch (error) {
+          console.log(error);
+        }
         break;
       default:
         break;
